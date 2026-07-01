@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Под Игото</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+</head>
+<body class="index-page"> <div class="container container-center">
+        <section class="hero-section">
+            
+        </section>
+
+        <div class="card card-inputs">
+            <button class="btn btn-primary-green" id="btn-create" onclick="createRoom()">
+                <div class="btn-content-left">
+                    <div class="logo-circle">
+                        <img src="icons/admin.png" class="btn-logo" alt="Лого">
+                    </div>
+                    <span class="btn-text">Създай стая</span>
+                </div>
+                <span class="arrow-right"></span>
+            </button>
+        </div>
+
+        <div class="card card-inputs">
+            <h2>Вход за учaстници</h2>
+            <div class="input-group">
+                <input type="text" id="join-code" placeholder="Код на стаята (4 цифри)" autocomplete="off">
+            </div>
+            <div class="input-group">
+                <input type="text" id="join-name" placeholder="Твоето име / Псевдоним" autocomplete="off">
+            </div>
+            <button class="btn btn-secondary-beige" id="btn-join" onclick="joinRoom()">
+                <div class="btn-content-left">
+                    <div class="logo-circle">
+                        <img src="icons/opened-door.png" class="btn-logo" alt="Лого">
+                    </div>
+                    <span class="btn-text">Влез в играта</span>
+                </div>
+                <span class="arrow-right"></span>
+            </button>
+        </div>
+
+        <div class="card card-inputs">
+            <h2>Помощ и информация</h2>
+            <button class="btn btn-secondary-beige" id="btn-rules" onclick="window.location.href='rules.html'">
+                <div class="btn-content-left">
+                    <div class="logo-circle">
+                        <img src="icons/open-book.png" class="btn-logo" alt="Лого">
+                    </div>
+                    <span class="btn-text">Правила</span>
+                </div>
+                <span class="arrow-right"></span>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyBmxRrJtqH2YGwHmf5tDwvsQ1FrSBHGPv4",
+            authDomain: "under-the-yoke.firebaseapp.com",
+            databaseURL: "https://under-the-yoke-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "under-the-yoke",
+            storageBucket: "under-the-yoke.firebasestorage.app",
+            messagingSenderId: "1060269212251",
+            appId: "1:1060269212251:web:997a025cd99e698e4fb57e"
+        };
+        
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        function createRoom() {
+            const hostName = "Разказвач";
+            const roomId = Math.floor(1000 + Math.random() * 9000).toString();
+            const btn = document.getElementById('btn-create');
+            
+            btn.querySelector('.btn-text').innerText = "Създаване...";
+            btn.disabled = true;
+            
+            db.ref(`rooms/${roomId}`).set({
+                meta: { status: "lobby", phase: "day", round: 1 },
+                players: { host: { name: hostName, isHost: true } }
+            }).then(() => {
+                localStorage.setItem('roomId', roomId);
+                localStorage.setItem('isHost', 'true');
+                localStorage.setItem('playerId', 'host');
+                window.location.href = 'lobby.html';
+            }).catch((error) => {
+                console.error("Firebase Грешка:", error);
+                alert("Грешка при създаване на стаята.");
+                btn.querySelector('.btn-text').innerText = "Създай стая";
+                btn.disabled = false;
+            });
+        }
+
+        function joinRoom() {
+            const roomId = document.getElementById('join-code').value.trim();
+            const playerName = document.getElementById('join-name').value.trim();
+            const btn = document.getElementById('btn-join');
+
+            if (!roomId || !playerName) {
+                return alert("Моля, въведете код на стаята и вашето име.");
+            }
+
+            btn.querySelector('.btn-text').innerText = "Свързване...";
+            btn.disabled = true;
+
+            db.ref(`rooms/${roomId}`).once('value').then(snapshot => {
+                if (snapshot.exists()) {
+                    const playerId = 'player_' + Math.random().toString(36).substr(2, 9);
+                    db.ref(`rooms/${roomId}/players/${playerId}`).set({
+                        name: playerName,
+                        cardId: "none",
+                        roleName: "none",
+                        currentTeam: "neutral",
+                        canVote: false,
+                        inPrison: false,
+                        currentNightVote: ""
+                    }).then(() => {
+                        localStorage.setItem('roomId', roomId);
+                        localStorage.setItem('isHost', 'false');
+                        localStorage.setItem('playerId', playerId);
+                        window.location.href = 'lobby.html';
+                    });
+                } else {
+                    alert("Стая с този код не съществува!");
+                    btn.querySelector('.btn-text').innerText = "Влез в играта";
+                    btn.disabled = false;
+                }
+            }).catch(error => {
+                console.error("Грешка при свързване:", error);
+                alert("Проблем при връзката с базата данни.");
+                btn.querySelector('.btn-text').innerText = "Влез в играта";
+                btn.disabled = false;
+            });
+        }
+    </script>
+</body>
+</html>

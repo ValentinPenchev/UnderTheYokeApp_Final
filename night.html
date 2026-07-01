@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Нощ - Под Игото</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <style>
+        /* Общ автентичен фон за цялото приложение */
+        body, .fullscreen-overlay {
+            background-image: 
+                linear-gradient(to bottom, rgba(244, 237, 217, 0) 0%, rgba(244, 237, 217, 0) 40%),
+                url('images/background-lobby,day,night.png') !important;
+            background-size: 100% auto !important;
+            background-repeat: no-repeat !important;
+            background-position: top center !important;
+            background-attachment: scroll !important;
+            background-color: #f4edd9 !important;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        }
+
+        /* Унифициран заоблен стил за картичките */
+        .card {
+            background-color: #ffffff !important;
+            opacity: 1 !important;
+            border: 1px solid #e2ded5;
+            border-radius: 16px !important;
+            padding: 24px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+        }
+
+        /* Красиви заоблени бутони */
+        .btn-main, .btn, .btn-team-toggle, .btn-flat-close, .vote-btn {
+            border-radius: 12px !important;
+            font-weight: 700 !important;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: all 0.2s ease-in-out;
+            box-sizing: border-box;
+        }
+        
+        .btn-main {
+            background-color: #3c8c3f !important;
+            color: white !important;
+            border: none !important;
+            padding: 16px 20px;
+            font-size: 15px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(60,140,63,0.2);
+        }
+        .btn-main:hover {
+            background-color: #317234 !important;
+            transform: translateY(-1px);
+        }
+
+        /* Деактивиран бутон на Организатора при изчакване на гласове */
+        .btn-main:disabled {
+            background-color: #a0a0a0 !important;
+            color: #e0e0e0 !important;
+            cursor: not-allowed !important;
+            opacity: 0.6 !important;
+            box-shadow: none !important;
+            transform: none !important;
+        }
+        
+        .btn-outline {
+            background-color: transparent !important;
+            border: 2px solid #7e7362 !important;
+            color: #7e7362 !important;
+            box-shadow: none !important;
+        }
+        .btn-outline:hover {
+            background-color: #7e7362 !important;
+            color: white !important;
+        }
+
+        /* Модален прозорец */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(43, 37, 29, 0.6);
+            z-index: 4000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        /* Грид за бутоните за гласуване при учениците */
+        #voting-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            gap: 12px;
+            margin-top: 15px;
+        }
+        .vote-btn {
+            background: #ffffff;
+            border: 2px solid #e2ded5;
+            padding: 16px 10px;
+            font-size: 14px;
+            color: #2b251d;
+            cursor: pointer;
+            text-align: center;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.02);
+        }
+        .vote-btn:hover {
+            border-color: #7e7362;
+            background: #fbfaf7;
+            transform: translateY(-2px);
+        }
+
+        /* Подредба на редовете при Разказвача */
+        .player-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background: #ffffff;
+            border: 1px solid #e2ded5;
+            border-radius: 12px;
+            margin-bottom: 8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.01);
+            font-size: 14px;
+        }
+        .player-meta-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .player-status-right {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            font-weight: 700;
+        }
+
+        /* Странично меню */
+        .sidebar {
+            position: fixed;
+            top: 0; left: -290px;
+            width: 280px; height: 100%;
+            background: #ffffff;
+            box-shadow: 4px 0 24px rgba(0,0,0,0.15);
+            transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 3000;
+            padding: 30px 20px;
+            box-sizing: border-box;
+        }
+        .sidebar.open { left: 0; }
+        
+        .teammates-list {
+            list-style: none;
+            padding: 0; margin: 15px 0 0 0;
+        }
+        .teammates-list li {
+            padding: 14px 16px;
+            background: #f7f5f0;
+            border: 1px solid #e2ded5;
+            border-radius: 12px;
+            margin-bottom: 8px;
+            font-weight: 700;
+            color: #2b251d;
+            font-size: 15px;
+        }
+
+        /* Картинка на картата */
+        .card-image-container {
+            width: 100%; height: 390px;
+            display: flex; align-items: center; justify-content: center;
+            overflow: hidden;
+        }
+        .card-image-container img { width: 100%; height: 100%; object-fit: contain; }
+
+        .mini-card-avatar {
+            width: 38px; height: 50px; border-radius: 8px; border: 2px solid #ffffff;
+            cursor: pointer; overflow: hidden; background: #2b251d url('images/back.png') no-repeat center center;
+            background-size: cover; box-shadow: 0 4px 10px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: center;
+        }
+        .mini-card-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        
+        .btn-team-toggle {
+            display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px;
+            border-radius: 10px; border: 1px solid #e2ded5; background: #ffffff;
+            cursor: pointer; font-weight: 700; font-size: 12px; color: #2b251d; box-shadow: 0 4px 10px rgba(0,0,0,0.02);
+        }
+
+        /* Красиви баджове за фазата */
+        .badge {
+            font-size: 12px;
+            font-weight: 800;
+            padding: 6px 14px;
+            background: #2b251d;
+            color: #ffffff;
+            border-radius: 20px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: inline-block;
+        }
+        
+        .status-voting-now {
+            background: #c62828 !important;
+            color: white !important;
+            padding: 8px 16px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 14px;
+            display: inline-block;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(198, 40, 40, 0.2);
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 0.9; }
+            50% { opacity: 1; transform: scale(1.01); }
+            100% { opacity: 0.9; }
+        }
+
+        .btn-flat-close { background-color: #7e7362 !important; color: white !important; border: none; width: 100%; padding: 12px; margin-top: 16px; }
+        .screen-title { font-family: 'Cormorant Infant', serif; font-size: 24px; font-weight: 700; color: #2b251d; }
+    </style>
+</head>
+<body onclick="closeSidebarIfClickOutside(event)">
+
+    <!-- Навигация за ученици -->
+    <div class="top-bar" id="student-topbar" style="display:none; align-items: center; justify-content: space-between; margin: 20px auto; max-width: 420px; padding: 0 10px;">
+        <button class="btn-team-toggle" onclick="toggleSidebar(event)">
+            <img src="icons/admin.png" alt="icon" onerror="this.style.display='none'" style="height: 14px; width: auto;"> 
+            <span>Моят отбор</span>
+        </button>
+        <div class="mini-card-avatar" id="mini-card-btn" onclick="toggleModal(event)">
+            <img id="mini-card-img" src="" alt="Роля" style="display: none;" onload="this.style.display='block'">
+        </div>
+    </div>
+
+    <!-- Странично меню за съмишленици -->
+    <div class="sidebar" id="team-sidebar" onclick="event.stopPropagation()">
+        <button class="close-sidebar-btn" onclick="toggleSidebar(event)" style="background:none; border:none; font-size:28px; cursor:pointer; float:right; margin-top:-15px;">&times;</button>
+        <h3 style="font-family: 'Cormorant Infant', serif; font-size: 22px; margin-bottom: 15px;">Съмишленици</h3>
+        <ul id="teammates-list" class="teammates-list"></ul>
+    </div>
+
+    <!-- Модален прозорец за Картата на играча -->
+    <div class="modal-overlay" id="card-modal" onclick="closeModal()">
+        <div class="card" style="padding: 16px; max-width: 310px; width: 100%;" onclick="event.stopPropagation()">
+            <div class="card-image-container" id="card-image-box"></div>
+            <button class="btn-flat-close" onclick="closeModal()">Затвори</button>
+        </div>
+    </div>
+
+    <!-- Екран за затвор (ИЗЧИСТЕН ДИЗАЙН С БУТОН ЗА НАЧАЛЕН ЕКРАН) -->
+    <div id="prison-screen" class="fullscreen-overlay" style="display:none; flex-direction: column; justify-content: center; align-items: center; padding: 20px; z-index: 5000; box-sizing: border-box;">
+        <div class="card" style="background: #ffffff !important; border: 2px solid #7e7362; text-align: center; padding: 40px 24px; max-width: 320px; width: 100%;">
+            <h1 style="font-family: 'Cormorant Infant', serif; font-size: 30px; color: #2b251d; margin: 0 0 24px 0; font-weight: 700;">🔒 Ти си в затвора!</h1>
+            <button class="btn-main" onclick="window.location.href='index.html'" style="max-width: 260px; width: 100%; margin: 0 auto; background-color: #7e7362 !important; box-shadow: none;">Към начален екран</button>
+        </div>
+    </div>
+
+    <!-- Екран при край на играта за Ученици -->
+    <div id="game-over-screen" class="fullscreen-overlay" style="display:none; flex-direction: column; justify-content: center; align-items: center; padding: 20px; z-index: 6000; box-sizing: border-box;">
+        <div class="card" style="background: #fdfaf2 !important; border: 2px solid #3c8c3f; text-align: center; padding: 24px; max-width: 360px; width: 100%;">
+            <span style="font-size: 12px; padding: 5px 12px; background: #e8f5e9; color: #2e7d32; border-radius: 12px; font-weight: 800; display: inline-block; margin-bottom: 10px;">🏆 СЕСИЯТА ПРИКЛЮЧИ</span>
+            <h2 id="winner-text" class="screen-title" style="font-size: 26px; color: #2b251d; margin-bottom: 8px;">Край на играта!</h2>
+            <p id="winner-reason" style="color: #7e7362; font-size: 14px; font-weight: 500; margin-bottom: 20px;">Заверата приключи.</p>
+            <button class="btn btn-main" onclick="window.location.href='index.html'" style="max-width: 260px; width: 100%; margin: 0 auto;">Към начален екран</button>
+        </div>
+    </div>
+
+    <!-- Главен контейнер -->
+    <div class="container" id="main-content-area" style="max-width: 420px; margin: 0 auto; padding: 10px 20px 20px 20px; box-sizing: border-box;">
+        <div style="text-align: center; margin-bottom: 10px;">
+            <div class="badge" style="background-color: #2b251d;">🌙 НОЩНА ФАЗА - Нощ <span id="round-num">1</span></div>
+        </div>
+        
+        <div style="text-align: center;">
+            <div class="status-voting-now" id="phase-badge">Зареждане...</div>
+        </div>
+        
+        <!-- Изглед за Ученици -->
+        <div id="student-view" style="display:none;">
+            <div class="card" id="action-panel">
+                <h3 class="screen-title">Кого от противниците ще се опитате да привлечете?</h3>
+                <p style="font-size:13px; color:#7e7362; margin-bottom:10px; font-weight: 500;">Посочете деец, когото искате да привлечете към вашата кауза.</p>
+                <div id="voting-buttons"></div>
+                <div id="vote-confirmed-msg" style="display: none; text-align: center; padding: 20px; font-weight: bold; color: #3c8c3f;">
+                    Ти гласува за привличането на <span id="voted-target-name"></span>.<br>
+                    <span style="font-size: 13px; color: #7e7362; font-weight: 500;">Изчакайте Организатора да премине нататък.</span>
+                </div>
+            </div>
+            
+            <p id="sleep-msg" style="display:none; text-align:center; color:#7e7362; font-weight: 600; margin-top:40px; font-size: 15px;">
+                ⏳ Твоят отбор спи в момента.<br><span style="font-size:13px; font-weight:500;">Изчакайте тайните действия на другата фракция...</span>
+            </p>
+            
+            <div class="card" id="no-vote-panel" style="display:none; text-align:center; padding:24px;">
+                <h3 class="screen-title" style="margin-bottom:10px;">Ти се събуждаш.</h3>
+                <p style="color:#7e7362; font-size:14px; font-weight: 500;">Нямаш право да гласуваш за привличане, но виждаш действията на отбора си и можеш да провериш съмишлениците си в страничното меню.</p>
+            </div>
+        </div>
+
+        <!-- Изглед за Разказвача -->
+        <div id="host-view" style="display:none;">
+            <!-- Табло за Край на играта (Показва се само при Host) -->
+            <div id="host-game-over-summary" class="card" style="display: none; background: #fdfaf2 !important; border: 2px solid #3c8c3f; text-align: center; padding: 24px;">
+                <span style="font-size: 12px; padding: 5px 12px; background: #e8f5e9; color: #2e7d32; border-radius: 12px; font-weight: 800; display: inline-block; margin-bottom: 10px;">🏆 СЕСИЯТА ПРИКЛЮЧИ</span>
+                <h2 id="host-winner-title" class="screen-title" style="font-size: 26px; color: #2b251d; margin-bottom: 8px;">КОМИТЕТЪТ ПЕЧЕЛИ!</h2>
+                <p id="host-winner-reason" style="color: #7e7362; font-size: 14px; font-weight: 500; margin-bottom: 20px;">Заверата приключи. По-долу виждате текущия статус на играчите.</p>
+                <button class="btn btn-main" onclick="window.location.href='index.html'" style="max-width: 260px; width: 100%; margin: 0 auto;">Към начален екран</button>
+            </div>
+
+            <div id="host-live-votes-card" class="card" style="background: #fffdf0 !important; border-color: #f1c40f;">
+                <h3 style="font-family: 'Cormorant Infant', serif; font-size: 22px; color: #2b251d; margin: 0 0 10px 0;">Гласове за привличане на живо</h3>
+                <div id="live-votes"></div>
+            </div>
+            <div id="host-recruit-card" class="card">
+                <h3 style="font-family: 'Cormorant Infant', serif; font-size: 20px; color: #2b251d; margin-bottom: 6px;">Привличане на дейци (Ръчно)</h3>
+                <p style="font-size:12px; color:#7e7362; margin-bottom:15px; font-weight: 500;">Въз основа на тайния вот или Ваше решение, привлечете съответния играч в отбора.</p>
+                <div id="recruit-list"></div>
+            </div>
+            
+            <div id="host-action-buttons" style="display: flex; justify-content: center; width: 100%; margin-top: 20px;">
+                <button class="btn-main" id="btn-next-stage-trigger" onclick="nextStage()" style="max-width: 320px; width: 100%;">Чака се зареждане...</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const roomId = localStorage.getItem('roomId');
+        if (!roomId) window.location.href = 'index.html';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBmxRrJtqH2YGwHmf5tDwvsQ1FrSBHGPv4",
+            authDomain: "under-the-yoke.firebaseapp.com",
+            databaseURL: "https://under-the-yoke-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "under-the-yoke",
+            storageBucket: "under-the-yoke.firebasestorage.app",
+            messagingSenderId: "1060269212251",
+            appId: "1:1060269212251:web:997a025cd99e698e4fb57e"
+        };
+
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        const isHost = localStorage.getItem('isHost') === 'true';
+        const myPlayerId = localStorage.getItem('playerId');
+        
+        let currentPhase = "", currentRound = 1, myTeam = "", myVote = "", iCanVote = false;
+
+        if (isHost) {
+            document.getElementById('host-view').style.display = 'block';
+            const studentTopbar = document.getElementById('student-topbar');
+            if(studentTopbar) studentTopbar.remove();
+            const cardModal = document.getElementById('card-modal');
+            if(cardModal) cardModal.remove();
+        } else {
+            document.getElementById('student-topbar').style.display = 'flex';
+            document.getElementById('student-view').style.display = 'block';
+        }
+
+        function handleGameOverVisibility(winnerText, reason) {
+            if (isHost) {
+                if(document.getElementById('host-action-buttons')) document.getElementById('host-action-buttons').style.display = 'none';
+                if(document.getElementById('host-live-votes-card')) document.getElementById('host-live-votes-card').style.display = 'none';
+                if(document.getElementById('host-recruit-card')) document.getElementById('host-recruit-card').style.display = 'none';
+                
+                if(document.getElementById('host-game-over-summary')) {
+                    document.getElementById('host-game-over-summary').style.display = 'block';
+                    document.getElementById('host-winner-title').innerText = winnerText;
+                    document.getElementById('host-winner-reason').innerText = reason;
+                }
+            } else {
+                if(document.getElementById('student-topbar')) document.getElementById('student-topbar').style.setProperty('display', 'none', 'important');
+                if(document.getElementById('main-content-area')) document.getElementById('main-content-area').style.display = 'none';
+                if(document.getElementById('prison-screen')) document.getElementById('prison-screen').style.display = 'none';
+                
+                const gameOverScreen = document.getElementById('game-over-screen');
+                if(gameOverScreen) {
+                    gameOverScreen.style.display = 'flex';
+                    document.getElementById('winner-text').innerText = winnerText;
+                    document.getElementById('winner-reason').innerText = reason;
+                }
+            }
+        }
+
+        db.ref(`rooms/${roomId}/meta`).on('value', snap => {
+            const meta = snap.val();
+            if (!meta) return;
+            currentPhase = meta.phase;
+            currentRound = meta.round;
+            document.getElementById('round-num').innerText = currentRound;
+            
+            if (meta.status === 'ended') {
+                handleGameOverVisibility("ИГРАТА БЕШЕ ПРЕКРАТЕНА", "Заверата приключи.");
+                return;
+            }
+            
+            if (currentPhase === 'day') { 
+                window.location.href = 'day.html'; 
+                return; 
+            }
+            document.getElementById('phase-badge').innerText = currentPhase === 'night_committee' ? 'Комитетът заседава...' : 'Заговорниците действат...';
+            renderLogic();
+        });
+
+        db.ref(`rooms/${roomId}/players`).on('value', snap => {
+            playersData = snap.val() || {};
+            
+            let committeeLost = false, conspiracyLost = false;
+            let goodCount = 0;
+            let badCount = 0;
+            let reasonText = "Заверата приключи.";
+
+            // 1. Изчисляване на условията за край на играта
+            for (let key in playersData) {
+                if (key === 'host') continue;
+                const p = playersData[key];
+                
+                if (p.cardId === 'ognyanov' && p.inPrison) {
+                    committeeLost = true;
+                    reasonText = "Бойчо Огнянов влезе в затвора! Комитетът е обезглавен.";
+                }
+                if (p.cardId === 'stefchov' && p.inPrison) {
+                    conspiracyLost = true;
+                    reasonText = "Киряк Стефчов влезе in затвора! Планът на заговорниците е разкрит.";
+                }
+                
+                if (!p.inPrison) {
+                    if (p.currentTeam === 'committee') goodCount++;
+                    if (p.currentTeam === 'conspiracy') badCount++;
+                }
+            }
+
+            if (!committeeLost && !conspiracyLost && badCount > goodCount) {
+                committeeLost = true;
+                reasonText = "Заговорниците взеха числено превъзходство над Комитета!";
+            }
+
+            if (committeeLost || conspiracyLost) {
+                const winnerText = committeeLost ? "ЗАГОВОРНИЦИТЕ ПЕЧЕЛЯТ!" : "КОМИТЕТЪТ ПЕЧЕЛИ!";
+                handleGameOverVisibility(winnerText, reasonText);
+            }
+
+            // Опресняване на локалните данни на ученика
+            if (!isHost && playersData[myPlayerId]) {
+                const p = playersData[myPlayerId];
+                myTeam = p.currentTeam;
+                myVote = p.currentNightVote || "";
+                iCanVote = p.canVote;
+                
+                if(document.getElementById('mini-card-img')) document.getElementById('mini-card-img').src = `images/${p.cardId}.png`;
+                if(document.getElementById('card-image-box')) document.getElementById('card-image-box').innerHTML = `<img src="images/${p.cardId}.png" alt="${p.roleName}">`;
+                
+                if (p.inPrison) {
+                    document.getElementById('prison-screen').style.display = 'flex';
+                    if(document.getElementById('student-topbar')) document.getElementById('student-topbar').style.setProperty('display', 'none', 'important');
+                    // КОРИГИРАНО: Скрива целия главен контейнер (включително фазата и кой заседава)
+                    if(document.getElementById('main-content-area')) document.getElementById('main-content-area').style.setProperty('display', 'none', 'important');
+                }
+            }
+            renderLogic();
+        });
+
+        function renderLogic() {
+            if (!Object.keys(playersData).length || !currentPhase) return;
+            const activeTeam = currentPhase === 'night_committee' ? 'committee' : 'conspiracy';
+
+            if (isHost) {
+                const votesContainer = document.getElementById('live-votes');
+                const recruitContainer = document.getElementById('recruit-list');
+                if(!votesContainer || !recruitContainer) return;
+                
+                votesContainer.innerHTML = ''; recruitContainer.innerHTML = '';
+                
+                let activeVotersCount = 0;
+                let actualVotesCount = 0;
+
+                for (let key in playersData) {
+                    if (key === 'host') continue;
+                    const p = playersData[key];
+                    if (!p.inPrison) {
+                        if (p.currentTeam === activeTeam && p.canVote) {
+                            activeVotersCount++;
+                            let targetStr = "";
+                            if (p.currentNightVote && p.currentNightVote !== "") {
+                                actualVotesCount++;
+                                targetStr = `<span style="color:#3c8c3f;"><b>${p.currentNightVote}</b></span>`;
+                            } else {
+                                targetStr = `<span style="color:#7e7362">⏳ Обмисля...</span>`;
+                            }
+                            
+                            votesContainer.innerHTML += `
+                                <div class="player-row">
+                                    <div class="player-meta-left">
+                                        <b>${p.name}</b> <span style="color:#7e7362; font-size:13px;">(${p.roleName})</span>
+                                    </div>
+                                    <div class="player-status-right">
+                                        ${targetStr}
+                                    </div>
+                                </div>`;
+                        }
+                        if (p.currentTeam !== activeTeam) {
+                            recruitContainer.innerHTML += `
+                                <div class="player-row">
+                                    <div class="player-meta-left">
+                                        <b>${p.name}</b> <span style="color:#7e7362; font-size:13px;">(${p.currentTeam === 'committee' ? 'Комитет' : (p.currentTeam === 'conspiracy' ? 'Заговор' : 'Гражданин')})</span>
+                                    </div>
+                                    <button class="btn-main btn-outline" style="padding: 6px 12px; font-size: 12px; width: auto; margin: 0;" onclick="recruitPlayer('${key}', '${activeTeam}')">Привлечи</button>
+                                </div>`;
+                        }
+                    }
+                }
+
+                const triggerBtn = document.getElementById('btn-next-stage-trigger');
+                if (triggerBtn) {
+                    if (activeVotersCount > 0 && actualVotesCount < activeVotersCount) {
+                        triggerBtn.disabled = true;
+                        triggerBtn.innerText = `Чака се гласуване (${actualVotesCount}/${activeVotersCount})`;
+                    } else {
+                        triggerBtn.disabled = false;
+                        triggerBtn.innerText = currentPhase === 'night_committee' ? "Премини към Заговорниците" : "Премини към Деня";
+                    }
+                }
+            } else {
+                if (playersData[myPlayerId]?.inPrison) return;
+
+                const isMyTurn = (currentPhase === 'night_committee' && myTeam === 'committee') || 
+                                 (currentPhase === 'night_conspiracy' && myTeam === 'conspiracy');
+                
+                const actionPanel = document.getElementById('action-panel');
+                const sleepMsg = document.getElementById('sleep-msg');
+                const noVotePanel = document.getElementById('no-vote-panel');
+                const btnContainer = document.getElementById('voting-buttons');
+                const voteConfirmedMsg = document.getElementById('vote-confirmed-msg');
+                const teamList = document.getElementById('teammates-list');
+                
+                if(teamList) teamList.innerHTML = '';
+                
+                if (isMyTurn) {
+                    if (iCanVote) {
+                        if(actionPanel) actionPanel.style.display = 'block'; 
+                        if(sleepMsg) sleepMsg.style.display = 'none'; 
+                        if(noVotePanel) noVotePanel.style.display = 'none';
+                        
+                        if (myVote && myVote !== "") {
+                            if(btnContainer) btnContainer.style.display = 'none';
+                            if(voteConfirmedMsg) voteConfirmedMsg.style.display = 'block';
+                            if(document.getElementById('voted-target-name')) document.getElementById('voted-target-name').innerText = myVote;
+                        } else {
+                            if(btnContainer) {
+                                btnContainer.style.display = 'block';
+                                btnContainer.innerHTML = '';
+                                for (let key in playersData) {
+                                    if (key === 'host') continue;
+                                    const p = playersData[key];
+                                    if (!p.inPrison && key !== myPlayerId && p.currentTeam !== myTeam) {
+                                        btnContainer.innerHTML += `<button class="vote-btn" onclick="castVote('${p.name}')">${p.name}</button>`;
+                                    }
+                                }
+                            }
+                            if(voteConfirmedMsg) voteConfirmedMsg.style.display = 'none';
+                        }
+                    } else {
+                        if(actionPanel) actionPanel.style.display = 'none'; 
+                        if(sleepMsg) sleepMsg.style.display = 'none'; 
+                        if(noVotePanel) noVotePanel.style.display = 'block';
+                    }
+                } else {
+                    if(actionPanel) actionPanel.style.display = 'none'; 
+                    if(sleepMsg) sleepMsg.style.display = 'block'; 
+                    if(noVotePanel) noVotePanel.style.display = 'none';
+                }
+
+                if(teamList) {
+                    for (let key in playersData) {
+                        if (key !== 'host' && playersData[key].currentTeam === myTeam && !playersData[key].inPrison && myTeam !== 'neutral') {
+                            teamList.innerHTML += `<li>${playersData[key].name} ${key === myPlayerId ? '(Ти)' : ''}</li>`;
+                        }
+                    }
+                }
+            }
+        }
+
+        function castVote(targetName) { 
+            db.ref(`rooms/${roomId}/players/${myPlayerId}`).update({ currentNightVote: targetName }); 
+        }
+        
+        function recruitPlayer(id, team) {
+            const teamCleanName = team === 'committee' ? 'Комитета' : 'Заговорниците';
+            if (confirm(`Сигурни ли сте, че искате да привлечете този деец към ${teamCleanName}?`)) {
+                db.ref(`rooms/${roomId}/players/${id}`).update({ currentTeam: team });
+            }
+        }
+
+        function nextStage() {
+            const updates = {};
+            for (let key in playersData) {
+                if (key !== 'host') updates[`rooms/${roomId}/players/${key}/currentNightVote`] = "";
+            }
+            if (currentPhase === 'night_committee') updates[`rooms/${roomId}/meta/phase`] = 'night_conspiracy';
+            else { 
+                updates[`rooms/${roomId}/meta/phase`] = 'day'; 
+                updates[`rooms/${roomId}/meta/round`] = currentRound + 1; 
+            }
+            db.ref().update(updates);
+        }
+
+        let sidebarOpen = false;
+        function toggleSidebar(e) { 
+            e.stopPropagation();
+            sidebarOpen = !sidebarOpen; 
+            document.getElementById('team-sidebar').classList.toggle('open', sidebarOpen); 
+        }
+        function closeSidebarIfClickOutside(e) {
+            if (sidebarOpen) {
+                const sidebar = document.getElementById('team-sidebar');
+                const toggleBtn = document.querySelector('.btn-team-toggle');
+                if (!sidebar.contains(e.target) && (!toggleBtn || !toggleBtn.contains(e.target))) {
+                    sidebarOpen = false;
+                    sidebar.classList.remove('open');
+                }
+            }
+        }
+        
+        function toggleModal(e) {
+            e.stopPropagation();
+            const modal = document.getElementById('card-modal');
+            if (modal.style.display === 'flex') {
+                closeModal();
+            } else {
+                openModal();
+            }
+        }
+        function openModal() { document.getElementById('card-modal').style.display = 'flex'; }
+        function closeModal() { document.getElementById('card-modal').style.display = 'none'; }
+    </script>
+</body>
+</html>

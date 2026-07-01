@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Правила - Под Игото</title>
+    <style>
+        /* Базови стилове */
+        body {
+            background-color: #f4edd9 !important; /* Основен чист жълт цвят за цялата страница */
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            margin: 0;
+            padding: 0;
+            color: #2b251d;
+            display: flex;
+            justify-content: center;
+            position: relative;
+            min-height: 100vh;
+        }
+
+        /* ИНТЕЛЕГЕНТНА СИСТЕМА ЗА БЕЗКРАЕН ФОН БЕЗ РЪБОВЕ */
+        .bg-image-wrapper {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            z-index: -10; /* Отива най-отзад под съдържанието */
+            pointer-events: none; /* Гарантира, че няма да пречи на кликането по бутони */
+            overflow: hidden;
+            line-height: 0;
+        }
+        .bg-image-wrapper img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        /* Този слой хваща точно края на снимката (независимо от екрана) и го размива плавно */
+        .bg-image-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 25%; /* Обхваща долния край на изображението за перфектен преход */
+            background: linear-gradient(to bottom, rgba(244, 237, 217, 0) 0%, #f4edd9 100%);
+        }
+
+        /* Главен контейнер с фиксирана ширина за mobile */
+        .rules-container {
+            max-width: 480px;
+            width: 100%;
+            box-sizing: border-box;
+            padding: 16px;
+            min-height: 100vh;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Обединен контейнер за заглавие и банер с общ CSS фон */
+        .rules-hero-header {
+            border-radius: 16px 16px 0 0;
+            padding: 16px 16px 40px 16px;
+            box-sizing: border-box;
+        }
+
+        /* Навигационна лента в горната част на общия фон */
+        .rules-header-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            z-index: 10;
+        }
+
+        .nav-btn {
+            width: 42px;
+            height: 42px;
+            background-color: #f4ecd4;
+            border: 1px solid #e2ded5;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.04);
+            transition: transform 0.2s;
+        }
+        .nav-btn:hover {
+            transform: scale(1.05);
+            background-color: #ede5ca;
+        }
+
+        .rules-main-title {
+            font-family: 'Cormorant Infant', Georgia, serif;
+            font-size: 26px;
+            font-weight: 800;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            margin: 0;
+            color: #2b251d;
+        }
+
+        /* Основна бяла карта с правилата */
+        .rules-card {
+            background-color: #ffffff;
+            border: 1px solid #e2ded5;
+            border-radius: 16px;
+            padding: 24px 18px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.06);
+            position: relative;
+            z-index: 5;
+            margin-top: -24px;
+        }
+
+        /* Декоративни разделители ◇ ТЕКСТ ◇ */
+        .rules-divider {
+            display: flex;
+            align-items: center;
+            text-align: center;
+            color: #7e7362;
+            font-family: 'Cormorant Infant', Georgia, serif;
+            font-size: 16px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin: 4px 0 16px 0;
+        }
+        .rules-divider::before, .rules-divider::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid #e2ded5;
+        }
+        .rules-divider:not(:empty)::before { margin-right: .5em; }
+        .rules-divider:not(:empty)::after { margin-left: .5em; }
+        .rules-divider span {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .section-intro-text {
+            text-align: center;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #2b251d;
+            margin: 0 auto 12px auto;
+            max-width: 90%;
+        }
+
+        /* Общи цветови акценти, използвани на различни места */
+        .color-rev { color: #3c8c3f; }
+        .color-traitor { color: #c62828; }
+        .color-neutral { color: #a0782a; }
+        .yellow { color: #8a7813; }
+
+
+        /* ==========================================================================
+           СЕКЦИЯ 1: РОЛИ В ИГРАТА (Напълно независим CSS)
+           ========================================================================== */
+        .roles-vertical-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .role-row-card {
+            background: #fdfcf7;
+            border: 1px solid #eaddca;
+            border-radius: 12px;
+            padding: 14px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        /* Икона в секция РОЛИ */
+        .roles-vertical-list .role-icon-wrapper {
+            min-width: 52px;
+            max-width: 52px;
+            height: 52px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px dashed #c4b89c;
+            border-radius: 12px;
+            background-color: #f7f3e8;
+        }
+
+        /* Картинка само в секция РОЛИ */
+        .roles-vertical-list .role-icon-wrapper img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            border-radius: inherit;
+        }
+
+        .role-text-side {
+            flex: 1;
+        }
+
+        /* Заглавие само в секция РОЛИ */
+        .roles-vertical-list .role-title {
+            font-size: 14px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin: 0 0 4px 0;
+        }
+
+        /* Описание само в секция РОЛИ */
+        .roles-vertical-list .role-desc {
+            font-size: 12px;
+            line-height: 1.4;
+            color: #554d42;
+            margin: 0;
+        }
+
+
+        /* ==========================================================================
+           СЕКЦИЯ 2: ХОД НА ИГРАТА (Напълно независим CSS)
+           ========================================================================== */
+        .timeline-container {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            margin-top: 12px;
+        }
+
+        .timeline-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        /* Кръглото число за стъпките */
+        .step-number {
+            background-color: #615643;
+            color: #ffffff;
+            font-size: 11px;
+            font-weight: 700;
+            min-width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 10px;
+        }
+
+        /* Кутийка за иконата в ХОД НА ИГРАТА */
+        .step-icon-box {
+            min-width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px dashed #c4b89c;
+            border-radius: 50%;
+            background-color: #f7f3e8;
+        }
+
+        /* Картинка само в ХОД НА ИГРАТА */
+        .step-icon-box img {
+            width: 80%;
+            height: 65%;
+            object-fit: contain;
+            border-radius: inherit;
+        }
+
+        .step-content {
+            flex: 1;
+        }
+
+        /* Заглавие на стъпката */
+        .step-title {
+            font-size: 13px;
+            font-weight: 800;
+            text-transform: uppercase;
+            margin: 0 0 2px 0;
+            color: #2b251d;
+        }
+
+        /* Описание на стъпката */
+        .step-desc {
+            font-size: 12px;
+            line-height: 1.4;
+            color: #554d42;
+            margin: 0;
+        }
+
+
+        /* ==========================================================================
+           СЕКЦИЯ 3: КРАЙ НА ИГРАТА (Напълно независим CSS)
+           ========================================================================== */
+        .endgame-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        @media (max-width: 380px) {
+            .endgame-grid {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+        }
+
+        /* Малката вертикална карта в КРАЙ НА ИГРАТА */
+        .endgame-grid .role-mini-card {
+            background: #fdfcf7;
+            border: 1px solid #eaddca;
+            border-radius: 12px;
+            padding: 12px 8px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* Кутийка за иконата в КРАЙ НА ИГРАТА */
+        .endgame-grid .role-icon-wrapper {
+            width: 44px;
+            height: 44px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px dashed #c4b89c;
+            border-radius: 12px;
+            background-color: #f7f3e8;
+        }
+
+        /* Картинка само в секция КРАЙ НА ИГРАТА */
+        .endgame-grid .role-icon-wrapper img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            border-radius: inherit;
+        }
+
+        /* Заглавие в секция КРАЙ НА ИГРАТА */
+        .endgame-grid .role-title {
+            font-size: 11px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin: 0 0 6px 0;
+        }
+
+        /* Описание в секция КРАЙ НА ИГРАТА */
+        .endgame-grid .role-desc {
+            font-size: 10.5px;
+            line-height: 1.4;
+            color: #554d42;
+            margin: 0;
+        }
+        
+    </style>
+</head>
+<body>
+
+    <div class="bg-image-wrapper">
+        <img src="images/rules-banner.png" alt="Основен фон град">
+        <div class="bg-image-overlay"></div>
+    </div>
+
+    <div class="rules-container">
+        
+        <div class="rules-hero-header">
+            <div class="rules-header-nav">
+                <button class="nav-btn" onclick="window.location.href='index.html'" aria-label="Назад">
+                    <span style="font-size: 16px; font-weight: bold; color: #2b251d;">←</span>
+                </button>
+                <h1 class="rules-main-title">Правила</h1>
+                <div style="width: 42px;"></div>
+            </div>
+        </div>
+
+        <div class="rules-card">
+            
+            <div class="rules-divider"><span>◇ За играта ◇</span></div>
+            <p class="section-intro-text">
+                „Под игото“ е игра на скрити роли, доверие и стратегия. Целта ти зависи от ролята, която си получил. Работи с другите... или ги предай.
+            </p>
+
+            <div class="rules-divider"><span>◇ Роли в играта ◇</span></div>
+            <div class="roles-vertical-list">
+                
+                <div class="role-row-card">
+                    <div class="role-icon-wrapper">
+                        <img src="icons/revo.png" alt="Реолюционери">
+                        </div>
+                    <div class="role-text-side">
+                        <div class="role-title color-rev">Революционер</div>
+                        <p class="role-desc">Ти си част от революционното движение. Целта ти е да разкриеш предателите и да спечелите свободата.</p>
+                    </div>
+                </div>
+
+                <div class="role-row-card">
+                    <div class="role-icon-wrapper">
+                        <img src="icons/traitor.png" alt="Предатели">
+                        </div>
+                    <div class="role-text-side">
+                        <div class="role-title color-traitor">Предател</div>
+                        <p class="role-desc">Ти си предател, който работи в полза на врага. Целта ти е да попречиш на революционерите и да останеш скрит.</p>
+                    </div>
+                </div>
+                <div class="role-row-card">
+                    <div class="role-icon-wrapper">
+                        <img src="icons/neutral.png" alt="Неутрални">
+                        </div>
+                    <div class="role-text-side">
+                        <div class="role-title color-traitor yellow">Неутрален</div>
+                        <p class="role-desc">Ти си неутрален играч, който не принадлежи към никоя от страните. Целта ти е да останеш скрит и да избегнеш да бъдеш изгонен.</p>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="rules-divider"><span>◇ Ход на играта ◇</span></div>
+            <div class="timeline-container">
+                <div class="timeline-item">
+                    <div class="step-number">1</div>
+                    <div class="step-icon-box">
+                        <img src="icons/admin.png" alt="Събиране на играчи">
+                        </div>
+                    <div class="step-content">
+                        <h4 class="step-title">Събиране на играчи</h4>
+                        <p class="step-desc">Създай стая или се присъедини към съществуваща. Изчакай всички играчи да се присъединят.</p>
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="step-number">2</div>
+                    <div class="step-icon-box">
+                        <img src="icons/roles.png" alt="Раздаване на роли">
+                        </div>
+                    <div class="step-content">
+                        <h4 class="step-title">Раздаване на роли</h4>
+                        <p class="step-desc">На всеки играч се раздава карта с роля. Не я разкривай на другите!</p>
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="step-number">3</div>
+                    <div class="step-icon-box">
+                        <img src="icons/chat.png" alt="Обсъждане">
+                        </div>
+                    <div class="step-content">
+                        <h4 class="step-title">Обсъждане</h4>
+                        <p class="step-desc">Играчите обсъждат кой може да бъде предател. Споделяй мнение, задавай въпроси, анализирай другите.</p>
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="step-number">4</div>
+                    <div class="step-icon-box">
+                        <img src="icons/voting.png" alt="Гласуване">
+                        </div>
+                    <div class="step-content">
+                        <h4 class="step-title">Гласуване</h4>
+                        <p class="step-desc">Всички гласуват за съмнителен играч. Играчът с най-много гласове бива изгонен от играта.</p>
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="step-number">5</div>
+                    <div class="step-icon-box">
+                        <img src="icons/weather.png" alt="Проверка и нов рунд">
+                        </div>
+                    <div class="step-content">
+                        <h4 class="step-title">Проверка и нов рунд</h4>
+                        <p class="step-desc">Разкрива се ролята на изгонения играч. Играта продължава до постигане на победа.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="rules-divider"><span>◇ Край на играта ◇</span></div>
+            <div class="endgame-grid">
+                <div class="role-mini-card">
+                    <div class="role-icon-wrapper">
+                        <img src="icons/revo.png" alt="Реолюционери">
+                        </div>
+                    <div class="role-title color-rev">Побeда на Революционерите</div>
+                    <p class="role-desc">Ако всички предатели бъдат разкрити и прогонени.</p>
+                </div>
+                <div class="role-mini-card">
+                    <div class="role-icon-wrapper">
+                        <img src="icons/traitor.png" alt="Предатели">
+                        </div>
+                    <div class="role-title color-traitor">Побeда на Предателите</div>
+                    <p class="role-desc">Ако предателите останат повече или са равни на революционерите.</p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</body>
+</html>

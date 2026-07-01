@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Под игото - Твоята роля</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+    <style>
+        /* Специфични стилове за картинките в картата */
+        .card-face img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 12px;
+        }
+        .card-face { padding: 0 !important; overflow: hidden; } /* За да паснат картинките точно */
+    </style>
+</head>
+<body>
+
+    <div class="app-card">
+        <h1>Твоята тайна роля</h1>
+        <p class="subtitle">Докосни писмото, за да обърнеш картата</p>
+        
+        <div class="card-perspective">
+            <div id="role-card" class="card-inner" onclick="flipCard()">
+                <!-- ГРЪБ НА КАРТАТА (Изображение) -->
+                <div class="card-face" id="card-back-face">
+                    <!-- Зарежда се динамично от JS -->
+                </div>
+                <!-- ЛИЦЕ НА КАРТАТА (Изображение) -->
+                <div class="card-face card-front" id="card-front-face">
+                    <!-- Зарежда се динамично от JS -->
+                </div>
+            </div>
+        </div>
+        
+        <div id="role-description" class="info-box">Изчакайте, заверата се подготвя...</div>
+        <button id="confirm-role-btn" class="btn btn-primary hidden" onclick="goToGameField()">Запомних я, затварям очи</button>
+    </div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyBmxRrJtqH2YGwHmf5tDwvsQ1FrSBHGPv4",
+  authDomain: "under-the-yoke.firebaseapp.com",
+  databaseURL: "https://under-the-yoke-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "under-the-yoke",
+  storageBucket: "under-the-yoke.firebasestorage.app",
+  messagingSenderId: "1060269212251",
+  appId: "1:1060269212251:web:997a025cd99e698e4fb57e"
+};
+
+firebase.initializeApp(firebaseConfig);
+const database = firebase.database();
+
+const roomId = localStorage.getItem("roomId");
+const playerId = localStorage.getItem("playerId");
+const isHost = localStorage.getItem("isHost") === "true";
+
+if (!roomId || !playerId) { window.location.href = "index.html"; }
+
+// ГЛОБАЛЕН ЛИНК ЗА ГРЪБ НА ВСИЧКИ КАРТИ
+const BACK_IMAGE_URL = "back.png"; // Сложи твоя линк тук
+
+const GAME_ROLES = {
+    ognianov: { name: "Бойчо Огнянов", text: "Организираш таен революционен комитет. Имаш право на глас нощем.", frontImg: "ognianov.png" },
+    sokolov: { name: "Доктор Соколов", text: "Верен съмишленик на Огнянов. Имаш право на глас нощем с Комитета.", frontImg: "sokolov.png" },
+    kableshkov: { name: "Тодор Каблешков", text: "Апостол на революцията. Имаш право на глас нощем с Комитета.", frontImg: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400" },
+    friend_ognianov: { name: "Приятел на Огнянов", text: "Участваш активно в заседанията на комитета и имаш право на глас нощем.", frontImg: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=400" },
+    damiancho: { name: "Дамянчо Григорът", text: "Възторжен патриот. Гласуваш нощем заедно с Комитета.", frontImg: "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=400" },
+    rada: { name: "Рада Госпожина", text: "Посветена си в тайните. Нощем виждаш Комитета, но нямаш право да гласуваш.", frontImg: "rada.png" },
+    ginka: { name: "Кака Гинка", text: "Смела българка. Нощем виждаш членовете на Комитета, но нямаш право на глас.", frontImg: "ginka.png" },
+    micho: { name: "Чорбаджи Мичо", text: "Патриот, купуваш пушки. Нощем виждаш Комитета, но нямаш право на глас.", frontImg: "https://images.unsplash.com/photo-1552058544-f2b08422138a?w=400" },
+    
+    stefchov: { name: "Кириак Стефчов", text: "Народоотстъпник и шпионин. Организираш заговор и гласуваш нощем.", frontImg: "stefchov.png" },
+    bey: { name: "Беят", text: "Представител на османската власт. Гласуваш нощем заедно със заговорниците.", frontImg: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400" },
+    zaptie: { name: "Шериф Ага", text: "Главен шериф. Виждаш заговорниците нощем. Имаш право на глас.", frontImg: "images/sherif_aga.png" },
+    necho: { name: "Нечо Пиронков", text: "Член на заговора. Помагаш за разкриването на тайните дейци. Гласуваш нощем.", frontImg: "https://images.unsplash.com/photo-1463453091185-61582044d556?w=400" },
+    friend_stefchov_vote: { name: "Приятел на Стефчов", text: "Подкрепяш турската власт. Участваш в заговора и гласуваш нощем.", frontImg: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=400" },
+    
+    friend_stefchov_spy1: { name: "Приятел на Стефчов (Таен)", text: "Виждаш заговорниците нощем, но нямаш право да гласуваш.", frontImg: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=400" },
+    friend_stefchov_spy2: { name: "Приятел на Стефчов (Таен)", text: "Виждаш заговорниците нощем, но нямаш право да гласуваш.", frontImg: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=400" },
+    friend_stefchov_spy3: { name: "Приятел на Стефчов (Таен)", text: "Виждаш заговорниците нощем, но нямаш право да гласуваш.", frontImg: "https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?w=400" },
+    
+    citizen: { name: "Гражданин на Бяла черква", text: "Неутрален гражданин. Можеш да бъдеш привлечен от всяка страна по-късно!", frontImg: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400" }
+};
+
+if (isHost) {
+    window.location.href = "night.html";
+} else {
+    // Взимаме СИГУРНО и ЕДНОКРАТНО точната ни роля от Firebase за този конкретен playerId
+    database.ref("rooms/" + roomId + "/players/" + playerId).once("value", (snapshot) => {
+        const val = snapshot.val();
+        if (val && val.cardId) {
+            const cardData = GAME_ROLES[val.cardId];
+            
+            // Вмъкваме картинките
+            document.getElementById("card-back-face").innerHTML = `<img src="${BACK_IMAGE_URL}" alt="Гръб">`;
+            document.getElementById("card-front-face").innerHTML = `<img src="${cardData.frontImg}" alt="${cardData.name}"><div class="role-title" style="position:absolute; bottom:10px; left:0; width:100%; background:rgba(255,255,255,0.9); padding:4px 0;">${cardData.name}</div>`;
+            
+            // Вмъкваме описанието
+            document.getElementById("role-description").innerHTML = `<strong>${cardData.name}</strong><br>${cardData.text}`;
+        } else {
+            document.getElementById("role-description").innerText = "Грешка при зареждане на ролята. Презареди страницата.";
+        }
+    });
+}
+
+function flipCard() {
+    document.getElementById("role-card").classList.toggle("flipped");
+    document.getElementById("confirm-role-btn").classList.remove("hidden");
+}
+
+function goToGameField() {
+    window.location.href = "night.html";
+}
+</script>
+</body>
+</html>
